@@ -19,6 +19,7 @@
 package cn.edu.thssdb.plan.impl;
 
 import cn.edu.thssdb.plan.LogicalPlan;
+import  cn.edu.thssdb.schema.Manager;
 
 public class CreateDatabasePlan extends LogicalPlan {
 
@@ -27,6 +28,11 @@ public class CreateDatabasePlan extends LogicalPlan {
   public CreateDatabasePlan(String databaseName) {
     super(LogicalPlanType.CREATE_DB);
     this.databaseName = databaseName;
+  }
+
+  public void exec(){
+    Manager manager = Manager.getInstance();
+    manager.createDatabaseIfNotExists(databaseName);
   }
 
   public String getDatabaseName() {

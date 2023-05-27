@@ -27,6 +27,22 @@ public class ThssDB {
   }
 
   public static void main(String[] args) {
+    if (args.length > 0) {
+      //设置隔离级别并打印
+      String level = args[0];
+      switch (level) {
+        case "U":
+          Global.DATABASE_ISOLATION_LEVEL = Global.ISOLATION_LEVEL.READ_UNCOMMITTED;
+          break;
+        case "C":
+          Global.DATABASE_ISOLATION_LEVEL = Global.ISOLATION_LEVEL.READ_COMMITTED;
+          break;
+        case "S":
+          Global.DATABASE_ISOLATION_LEVEL = Global.ISOLATION_LEVEL.SERIALIZABLE;
+          break;
+      }
+    }
+    System.out.println("[ISOLATION LEVEL]: " + Global.DATABASE_ISOLATION_LEVEL);
     ThssDB server = ThssDB.getInstance();
     server.start();
   }

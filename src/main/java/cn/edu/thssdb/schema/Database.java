@@ -35,7 +35,6 @@ public class Database {
     this.logger = new Logger(folder, logger_name);
     this.droppedTables = new ArrayList<>();
 
-    recover();
   }
 
   /** [method] 读取日志 */
@@ -82,7 +81,7 @@ public class Database {
     droppedTables.add(tables.remove(name));
   }
 
-
+  /** [method] 查询表 */
   public String select(QueryTable[] queryTables) {
     // TODO
     QueryResult queryResult = new QueryResult(queryTables);
@@ -107,6 +106,15 @@ public class Database {
     this.logger.deleteFile();
     this.meta.deleteFile();
     Paths.get(Global.DATA_ROOT_FOLDER, name).toFile().delete();
+  }
+
+  /** [method] 获取数据库中所有表 */
+  public ArrayList<Table> getTables() {
+    ArrayList<Table> res = new ArrayList<>();
+    for (Table table : tables.values()) {
+      res.add(table);
+    }
+    return res;
   }
 
   public void quit() {

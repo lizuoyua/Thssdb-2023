@@ -18,16 +18,153 @@
  */
 package cn.edu.thssdb.parser;
 
+import cn.edu.thssdb.exception.IllegalTypeException;
 import cn.edu.thssdb.plan.LogicalPlan;
-import cn.edu.thssdb.plan.impl.CreateDatabasePlan;
+import cn.edu.thssdb.plan.impl.*;
+import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
+import cn.edu.thssdb.type.ColumnType;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.misc.Interval;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import javax.sound.midi.SysexMessage;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 
 public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
+
+  public String getFullText(ParseTree tree) {
+    ParserRuleContext context = (ParserRuleContext) tree;
+    if (context.children == null) {
+      return "";
+    }
+    Token startToken = context.start;
+    Token stopToken = context.stop;
+    Interval interval = new Interval(startToken.getStartIndex(), stopToken.getStopIndex());
+    String result = context.start.getInputStream().getText(interval);
+    return result;
+  }
 
   @Override
   public LogicalPlan visitCreateDbStmt(SQLParser.CreateDbStmtContext ctx) {
     return new CreateDatabasePlan(ctx.databaseName().getText());
+  }
+
+  @Override
+  public LogicalPlan visitDropDbStmt(SQLParser.DropDbStmtContext ctx) {
+    return new DropDatabasePlan(ctx.databaseName().getText());
+  }
+
+  @Override
+  public LogicalPlan visitUseDbStmt(SQLParser.UseDbStmtContext ctx) {
+    return new UseDatabasePlan(ctx.databaseName().getText());
+  }
+
+  @Override
+  public LogicalPlan visitCreateTableStmt(SQLParser.CreateTableStmtContext ctx) {
+    String tableName = ctx.tableName().getText();
+    int n = ctx.getChildCount();
+    ArrayList<ColumnDefPlan> columnDefPlans = new ArrayList<>();
+    String primaryKey = null;
+    for (int i = 4; i < n; i += 2) {
+      if (visit(ctx.getChild(i)) instanceof ColumnDefPlan) {
+        columnDefPlans.add((ColumnDefPlan) visit(ctx.getChild(i)));
+      } else if (visit(ctx.getChild(i)) instanceof TableConstraintPlan) {
+        primaryKey = ((TableConstraintPlan)visit(ctx.getChild(i))).getColumnName();
+      }
+    }
+    ArrayList<Column> columns = new ArrayList<>();
+    int primaryKeyIndex = -1;
+
+    for (int i = 0; i < columnDefPlans.size(); i++) {
+      ColumnDefPlan c = columnDefPlans.get(i);
+
+      if (c.getPrimary()) {
+        primaryKeyIndex = i;
+        c.setNotNull(true);
+      }
+
+      if (primaryKey != null) {
+        if (primaryKey.equalsIgnoreCase(c.getColumnName())) {
+          primaryKeyIndex = i;
+          c.setPrimary(true);
+          c.setNotNull(true);
+        }
+      }
+
+      Column column =
+              new Column(
+                      c.getColumnName(),
+                      c.getTypeNamePlan().getColumnType(),
+                      c.getPrimary(),
+                      c.getNotNull(),
+                      c.getTypeNamePlan().getMaxLength());
+      columns.add(column);
+    }
+    Column[] pColumns = new Column[columns.size()];
+    for (int i = 0; i < columns.size(); i++) {
+      pColumns[i] = columns.get(i);
+    }
+    return new CreateTablePlan(tableName, pColumns, primaryKeyIndex, getFullText(ctx));
+  }
+
+  @Override
+  public LogicalPlan visitColumnDef(SQLParser.ColumnDefContext ctx) {
+    String columnName = ctx.columnName().getText();
+    TypeNamePlan typeNamePlan = (TypeNamePlan) visit(ctx.typeName());
+    int n =ctx.getChildCount();
+    boolean isPrimary = false;
+    boolean isNotNull = false;
+    if(n>2) {
+      isPrimary = ((ColumnConstraintPlan) visit(ctx.getChild(2))).getPrimary();
+      isNotNull = ((ColumnConstraintPlan) visit(ctx.getChild(2))).getNotNull();
+    }
+    return new ColumnDefPlan(columnName,typeNamePlan,isPrimary,isNotNull);
+  }
+
+  @Override
+  public LogicalPlan visitColumnName(SQLParser.ColumnNameContext ctx) {
+    return new ColumnNamePlan(ctx.getChild(0).getText().toUpperCase());
+  }
+
+  @Override
+  public LogicalPlan visitTypeName(SQLParser.TypeNameContext ctx) {
+    if (ctx.getChildCount() == 1) {
+      try {
+        return new TypeNamePlan(ColumnType.string2ColumnType(ctx.getChild(0).getText().toUpperCase()));
+      } catch (Exception e) {
+        throw new IllegalTypeException();
+      }
+    } else {
+      try {
+        int maxLength = Integer.parseInt(ctx.getChild(2).getText());
+        return new TypeNamePlan(
+                ColumnType.string2ColumnType(ctx.getChild(0).getText().toUpperCase()), maxLength);
+      } catch (Exception e) {
+        throw new IllegalTypeException();
+      }
+    }
+  }
+
+  @Override
+  public LogicalPlan visitColumnConstraint(SQLParser.ColumnConstraintContext ctx) {
+    boolean isPrimary = false;
+    boolean isNotNull = false;
+    if(ctx.getChild(0).getText().toUpperCase().equals("PRIMARY")){
+      isPrimary = true;
+    }
+    else if(ctx.getChild(0).getText().toUpperCase().equals("NOT")){
+      isNotNull = true;
+    }
+    return new ColumnConstraintPlan(isPrimary, isNotNull);
+  }
+
+  @Override
+  public LogicalPlan visitTableConstraint(SQLParser.TableConstraintContext ctx) {
+    return new TableConstraintPlan(ctx.getChild(3).getText());
   }
 
   // TODO: parser to more logical plan

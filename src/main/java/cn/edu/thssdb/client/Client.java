@@ -117,6 +117,7 @@ public class Client {
     try {
       ExecuteStatementResp resp = client.executeStatement(req);
       if (resp.status.code == Global.SUCCESS_CODE) {
+        //供查询用
         if (resp.hasResult) {
           StringBuilder column_str = new StringBuilder();
           int column_size = resp.columnsList.size();

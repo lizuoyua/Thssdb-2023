@@ -8,6 +8,17 @@ public class Global {
 
   public static String DEFAULT_SERVER_HOST = "127.0.0.1";
   public static int DEFAULT_SERVER_PORT = 6667;
+
+  public enum ISOLATION_LEVEL {
+    READ_UNCOMMITTED,
+    READ_COMMITTED,
+    SERIALIZABLE
+  }
+
+  public static ISOLATION_LEVEL DATABASE_ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMITTED;
+
+  public static final boolean ISOLATION_STATUS = true;
+
   public static String DEFAULT_USER_NAME = "root";
   public static String DEFAULT_PASSWORD = "root";
 

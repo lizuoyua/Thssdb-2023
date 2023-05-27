@@ -22,6 +22,7 @@ public class Manager {
     return Manager.ManagerHolder.INSTANCE;
   }
 
+  /** [method] 构造方法 */
   public Manager() {
     databases = new HashMap<>();
     lock = new ReentrantReadWriteLock();
@@ -63,7 +64,7 @@ public class Manager {
   }
 
   /** [method] 创建数据库 */
-  private void createDatabaseIfNotExists(String name) {
+  public void createDatabaseIfNotExists(String name) {
     if(contains(name)) throw new DuplicateDatabaseException();
     databases.put(name, new Database(name));
     databasesList.add(name);
@@ -71,7 +72,7 @@ public class Manager {
   }
 
   /** [method] 删除数据库 */
-  private void deleteDatabase(String name) {
+  public void deleteDatabase(String name) {
     if(!contains(name)) throw new DatabaseNotExistException();
     databases.get(name).clearData();
     databases.remove(name);
