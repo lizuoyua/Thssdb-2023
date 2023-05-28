@@ -24,7 +24,6 @@ public class Table implements Iterable<Row> {
 
   /**  新增属性*/
   private String folder;
-
   private  Meta tableMeta;
 
   private PersistentStorage<Row> persistentStorageData; // 数据持久化
@@ -212,6 +211,86 @@ public class Table implements Iterable<Row> {
     return index.get(entry);
   }
 
+  /** [method] 添加列 */
+  public void addColumn(String name, ColumnType type, int maxLen) {
+    columns.add(new Column(name, type, false, false, maxLen));
+    Iterator<Row> it = iterator();
+    while (it.hasNext()) {
+      it.next().getEntries().add(new Entry(null));
+    }
+  }
+
+  /** [method] 删除列 */
+  public void dropColumn(String name) {
+    int i = 0;
+    for (Column column : columns) {
+      if (column.getName().equals(name)) {
+        break;
+      }
+      i++;
+    }
+    if (i == primaryIndex)
+      throw new AlterColumnException("Exception: Cannot drop primary index column!");
+    if (i == columns.size()) throw new UnknownColumnException();
+    else columns.remove(i);
+    Iterator<Row> it = iterator();
+    while (it.hasNext()) {
+      it.next().getEntries().remove(i);
+    }
+  }
+
+  /** [method] 更改列 */
+  public void alterColumn(String name, ColumnType type, int maxLen) {
+    int old_max_len;
+    int i = 0;
+    for (Column column : columns) {
+      if (column.getName().equals(name)) {
+        break;
+      }
+      i++;
+    }
+    if (i == primaryIndex)
+      throw new AlterColumnException("Exception: Cannot alter primary index column!");
+    if (i == columns.size()) throw new UnknownColumnException();
+    else {
+      ColumnType old_type = columns.get(i).getType();
+
+      // 数字类型可以互相转换，但不可转换为字符串
+      if (old_type == type && type != ColumnType.STRING
+              || old_type == type
+              && type == ColumnType.STRING
+              && columns.get(i).getMaxLength() == maxLen) return;
+      else {
+        if (old_type != ColumnType.STRING) {
+          if (type == ColumnType.STRING)
+            throw new AlterColumnException("Exception: Column cannot be altered to new type!");
+        } else if (old_type == ColumnType.STRING) {
+          if (type != ColumnType.STRING)
+            throw new AlterColumnException("Exception: Column cannot be altered to new type!");
+        }
+        Column c = columns.remove(i);
+        old_max_len = c.getMaxLength();
+        columns.add(i, new Column(name, type, false, c.isNotNull(), maxLen));
+      }
+    }
+    Iterator<Row> it = iterator();
+    while (it.hasNext()) {
+      ArrayList<Entry> entries = it.next().getEntries();
+      Entry entry = entries.get(i);
+      if (entry.value == null) continue;
+      if (type == ColumnType.STRING) {
+        // 如果有超长的字符串，则回退
+        if (((String) entry.value).length() > maxLen) {
+          boolean not_null = columns.remove(i).isNotNull();
+          columns.add(i, new Column(name, type, false, not_null, old_max_len));
+          throw new AlterColumnException("Exception: String exceeds max length!");
+        }
+      } else {
+        entry.value = ColumnType.getColumnTypeValue(type, Double.valueOf(entry.toString()));
+      }
+    }
+  }
+
   /** [method] 序列化 */
   private void serialize() {
     persistentStorageData.serialize(iterator());
@@ -253,5 +332,13 @@ public class Table implements Iterable<Row> {
   @Override
   public Iterator<Row> iterator() {
     return new TableIterator(this);
+  }
+
+  public String getTableName() {
+    return tableName;
+  }
+
+  public ArrayList<Column> getColumns() {
+    return columns;
   }
 }

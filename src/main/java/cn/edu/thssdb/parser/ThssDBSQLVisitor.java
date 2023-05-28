@@ -167,5 +167,64 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return new TableConstraintPlan(ctx.getChild(3).getText());
   }
 
+  @Override
+  public LogicalPlan visitDropTableStmt(SQLParser.DropTableStmtContext ctx) {
+    return new DropTablePlan(ctx.tableName().getText());
+  }
+
+  @Override
+  public LogicalPlan visitShowTableStmt(SQLParser.ShowTableStmtContext ctx) {
+    return new ShowTablePlan(ctx.tableName().getText());
+  }
+
+  @Override
+  public LogicalPlan visitLiteralValue(SQLParser.LiteralValueContext ctx) {
+    String str = ctx.getChild(0).getText();
+    Object child = ctx.getChild(0);
+    if (str.equalsIgnoreCase("NULL")) {
+      return new LiteralValuePlan(LiteralValuePlan.LiteralType.NULL, "null");
+    } else if (str.charAt(0) == '\'') {
+      return new LiteralValuePlan(LiteralValuePlan.LiteralType.STRING, str.substring(1, str.length() - 1));
+    } else return new LiteralValuePlan(LiteralValuePlan.LiteralType.FLOAT_OR_DOUBLE, str);
+  }
+
+  @Override
+  public LogicalPlan visitInsertStmt(SQLParser.InsertStmtContext ctx) {
+    String tableName = ctx.tableName().getText();
+    int n = ctx.getChildCount();
+    ArrayList<String> columnNames = new ArrayList<>();
+    ArrayList<ArrayList<LiteralValuePlan>> values = new ArrayList<>();
+    String text = ctx.getChild(3).getText();
+
+    if (text.equalsIgnoreCase("VALUES")) {
+      for (int i = 4; i < n; i += 2) {
+        LiteralValuePlan plan = (LiteralValuePlan)visit(ctx.getChild(i));
+        ArrayList<LiteralValuePlan> tmp = new ArrayList<>();
+        tmp.add(plan);
+        values.add(tmp);
+      }
+      return new InsertPlan(tableName, values);
+    } else {
+      int i;
+      for (i = 4; i < n; i++) {
+        if (ctx.getChild(i).getText().equalsIgnoreCase("VALUES")) break;
+        else if (ctx.getChild(i).getText().equals(",") || ctx.getChild(i).getText().equals(")"))
+          continue;
+        else {
+          LiteralValuePlan plan = (LiteralValuePlan) visit(ctx.getChild(i));
+          columnNames.add(plan.getString());
+        }
+      }
+      i++;
+      for (; i < n; i += 2) {
+        LiteralValuePlan plan = (LiteralValuePlan)visit(ctx.getChild(i));
+        ArrayList<LiteralValuePlan> tmp = new ArrayList<>();
+        tmp.add(plan);
+        values.add(tmp);
+      }
+      return new InsertPlan(tableName, columnNames, values);
+    }
+  }
+
   // TODO: parser to more logical plan
 }

@@ -1,6 +1,7 @@
 package cn.edu.thssdb.plan;
 
 import cn.edu.thssdb.schema.Database;
+import cn.edu.thssdb.schema.Manager;
 import java.util.LinkedList;
 
 public abstract class LogicalPlan {
@@ -19,9 +20,14 @@ public abstract class LogicalPlan {
     return type;
   }
 
-  public void setCurrentDatabase(String name){this.currentDatabaseName=name;}
+  public void setCurrentDatabase(String name){
+    this.currentDatabaseName=name;
+    this.database = Manager.getInstance().getDatabaseByName(currentDatabaseName);
+  }
 
   public void exec(){}
+
+  public void undo() {}
 
   /** [method] 获取日志 */
   public LinkedList<String> getLog() { return null; }
@@ -42,5 +48,6 @@ public abstract class LogicalPlan {
     TBL_CONSTRAINT,
     COL_NAME,
     TYPE_NAME,
+    LIT_VAL,
   }
 }

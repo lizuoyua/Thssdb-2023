@@ -60,8 +60,10 @@ public class IServiceHandler implements IService.Iface {
     // TODO: implement execution logic
     LogicalPlan plan = LogicalGenerator.generate(req.statement);
     switch (plan.getType()) {
-      case CREATE_DB:
       case CREATE_TBL:
+      case DROP_TBL:
+      case SHOW_TBL:
+      case INSERT:
         System.out.println("[DEBUG] " + plan);
         plan.setCurrentDatabase(activeDatabaseName);
         plan.exec();
@@ -76,6 +78,7 @@ public class IServiceHandler implements IService.Iface {
         }
         plan.exec();
         return new ExecuteStatementResp(StatusUtil.success(), false);
+      case CREATE_DB:
       case USE_DB:
         System.out.println("[DEBUG] " + plan);
         plan.setCurrentDatabase(activeDatabaseName);

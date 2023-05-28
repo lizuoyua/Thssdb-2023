@@ -83,7 +83,6 @@ public class CreateTablePlan extends LogicalPlan {
             throw new WrongCreateTableException(moreThanOneKey);
         }
 
-        System.out.println("aaaaaaaaaaaa");
         Manager.getInstance().getDatabaseByName(currentDatabaseName).create(tableName, columns, primaryIndex);
     }
 

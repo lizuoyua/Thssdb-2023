@@ -6,8 +6,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="ThssDB-2023" />
         <module name="ThssDB-2023-master - v1.5" />
+        <module name="ThssDB-2023-master - v1.6" />
+        <module name="ThssDB-2023" />
         <module name="ThssDB-2023-master - v1" />
       </profile>
     </annotationProcessing>
